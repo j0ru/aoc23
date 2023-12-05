@@ -141,6 +141,6 @@ pub mod tests {
         ...$.*....
         .664.598..";
 
-        assert_eq!(solve_part2(&input_generator(EXAMPLE)), 451490);
+        assert_eq!(solve_part2(&input_generator(EXAMPLE)), 467835);
     }
 }
