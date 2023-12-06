@@ -47,7 +47,7 @@ pub fn input_generator(input: &str) -> Maps {
     }
 
     let mut current_src_dest = Some((String::new(), String::new()));
-    while let Some(line) = line_iter.next() {
+    for line in line_iter {
         if let Some(caps) = re_source_destination.captures(line) {
             current_src_dest.replace((caps["source"].to_string(), caps["destination"].to_string()));
         } else if let Some(caps) = re_range.captures(line) {
@@ -67,7 +67,7 @@ pub fn input_generator(input: &str) -> Maps {
 #[aoc(day5, part1)]
 pub fn solve_part1(input: &Maps) -> u64 {
     let mut res = u64::MAX;
-    let foo = [
+    let translation_chain = [
         String::from("seed"),
         String::from("soil"),
         String::from("fertilizer"),
@@ -79,7 +79,7 @@ pub fn solve_part1(input: &Maps) -> u64 {
     ];
     for seed in input.seeds.iter() {
         let mut latest = *seed;
-        for mapping in foo.windows(2) {
+        for mapping in translation_chain.windows(2) {
             latest = input
                 .maps
                 .get(&(mapping[0].clone(), mapping[1].clone()))
@@ -95,7 +95,7 @@ pub fn solve_part1(input: &Maps) -> u64 {
 #[aoc(day5, part2)]
 pub fn solve_part2(input: &Maps) -> u64 {
     let mut res = u64::MAX;
-    let foo = [
+    let translation_chain = [
         String::from("seed"),
         String::from("soil"),
         String::from("fertilizer"),
@@ -113,7 +113,7 @@ pub fn solve_part2(input: &Maps) -> u64 {
                 .into_par_iter()
                 .map(|seed| {
                     let mut latest = seed;
-                    for mapping in foo.windows(2) {
+                    for mapping in translation_chain.windows(2) {
                         latest = input
                             .maps
                             .get(&(mapping[0].clone(), mapping[1].clone()))

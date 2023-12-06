@@ -1,4 +1,4 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 use regex::Regex;
 
 type Number = u64;
@@ -50,7 +50,7 @@ fn solve_part1(input: &str) -> Number {
 
 #[aoc(day6, part2)]
 fn solve_part2(input: &str) -> Number {
-    solve_part1(&input.replace(" ", ""))
+    solve_part1(&input.replace(' ', ""))
 }
 
 #[cfg(test)]

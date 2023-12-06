@@ -34,7 +34,7 @@ fn solve_part1(input: &[Card]) -> u32 {
     for card in input {
         let mut card_score = 0;
         for num in card.actual.iter() {
-            if card.winning.contains(&num) {
+            if card.winning.contains(num) {
                 if card_score > 0 {
                     card_score *= 2;
                 } else {
@@ -54,7 +54,7 @@ fn solve_part2(input: &[Card]) -> u32 {
     for (idx, card) in input.iter().enumerate() {
         let mut card_score = 0;
         for num in card.actual.iter() {
-            if card.winning.contains(&num) {
+            if card.winning.contains(num) {
                 card_score += 1;
             }
         }
