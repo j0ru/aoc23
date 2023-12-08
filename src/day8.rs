@@ -5,7 +5,12 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
-use std::collections::HashMap;
+use std::time::Instant;
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    rc::{Rc, Weak},
+};
 
 use aoc_runner_derive::aoc;
 
@@ -36,34 +41,35 @@ impl Iterator for Instructions {
 
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
-    left: &'a str,
-    right: &'a str,
+    name: &'a str,
+    left: Weak<RefCell<Self>>,
+    right: Weak<RefCell<Self>>,
 }
 
 impl<'a> Node<'a> {
-    pub fn get(&self, direction: Direction) -> &'a str {
+    pub fn get(&self, direction: Direction) -> Weak<RefCell<Self>> {
         match direction {
-            Direction::Left => self.left,
-            Direction::Right => self.right,
+            Direction::Left => self.left.clone(),
+            Direction::Right => self.right.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Map<'a> {
-    nodes: HashMap<&'a str, Node<'a>>,
-    current_node: &'a str,
+    nodes: Vec<Rc<RefCell<Node<'a>>>>,
+    current_node: Weak<RefCell<Node<'a>>>,
     instructions: Instructions,
 }
 
 impl<'a> Iterator for Map<'a> {
     type Item = &'a str;
     fn next(&mut self) -> Option<Self::Item> {
-        let current_node = self.nodes.get(self.current_node)?;
-        let next_node = current_node.get(self.instructions.next().unwrap());
+        let current_node = self.current_node.upgrade().unwrap();
+        let next_node = current_node.borrow().get(self.instructions.next().unwrap());
 
         self.current_node = next_node;
-        Some(self.current_node)
+        Some(self.current_node.upgrade().unwrap().borrow().name)
     }
 }
 
@@ -82,20 +88,38 @@ impl<'a> Map<'a> {
             .collect();
 
         let mut res = Map {
-            nodes: HashMap::new(),
-            current_node: "AAA",
+            nodes: Vec::new(),
+            current_node: Weak::new(),
             instructions: Instructions {
                 directions,
                 current: 0,
             },
         };
 
+        let mut node_map = HashMap::new();
+
         for line in line_iter.skip(1) {
             let (name, rest) = line.split_once(" = ").unwrap();
+            res.nodes.push(Rc::new(RefCell::new(Node {
+                name,
+                left: Weak::new(),
+                right: Weak::new(),
+            })));
             if let Ok((_, (left, right))) = parse_moves(rest) {
-                res.nodes.insert(name, Node { left, right });
+                node_map.insert(name, (res.nodes.len() - 1, (left, right)));
             }
         }
+
+        for (node_idx, (left, right)) in node_map.values() {
+            let left = Rc::downgrade(res.nodes.get(node_map.get(left).unwrap().0).unwrap());
+            let right = Rc::downgrade(res.nodes.get(node_map.get(right).unwrap().0).unwrap());
+
+            let current = res.nodes.get_mut(*node_idx).unwrap();
+            current.borrow_mut().left = left;
+            current.borrow_mut().right = right;
+        }
+
+        res.current_node = Rc::downgrade(res.nodes.get(node_map.get("AAA").unwrap().0).unwrap());
 
         res
     }
@@ -127,42 +151,52 @@ pub fn solve_part1(input: &str) -> Number {
     res
 }
 
-fn vec_lcm(mut input: Vec<Number>) -> Number {
-    if input.len() == 2 {
-        num::integer::lcm(input[0], input[1])
-    } else {
-        num::integer::lcm(input.pop().unwrap(), vec_lcm(input))
-    }
-}
+const SOLUTION_PART2: f64 = 15746133679061.0;
 
 #[aoc(day8, part2)]
 pub fn solve_part2(input: &str) -> Number {
     let map = Map::from(input);
-    let routes = map
+    let mut routes: Vec<Map> = map
         .nodes
-        .keys()
+        .iter()
         .filter_map(|node| {
-            if node.ends_with('A') {
+            if node.borrow().name.ends_with('A') {
                 let mut res = map.clone();
-                res.current_node = node;
+                res.current_node = Rc::downgrade(node);
                 Some(res)
             } else {
                 None
             }
         })
-        .map(|map| {
-            let mut res = 0;
-            for node in map {
-                res += 1;
-                if node.ends_with('Z') {
-                    break;
-                }
-            }
-            res
-        })
         .collect();
 
-    vec_lcm(routes)
+    let start = Instant::now();
+    let mut res = 0;
+    loop {
+        res += 1;
+        if res % 10_000_000 == 0 && start.elapsed().as_secs() != 0 {
+            let progress = res as f64 / SOLUTION_PART2;
+            println!(
+                "Iteration\t{res}\t\t{:.5}%\t\t{}it/s\t\t{:.0}h left",
+                progress * 100.,
+                crate::common::human_readable_numbers(res / start.elapsed().as_secs()),
+                start.elapsed().as_secs() as f64 / 3600. / progress
+            );
+        }
+
+        let mut at_end = 0;
+        for route in routes.iter_mut() {
+            let current = route.next().unwrap();
+            if current.ends_with('Z') {
+                at_end += 1;
+            }
+        }
+        if at_end == routes.len() {
+            break;
+        }
+    }
+
+    res
 }
 
 #[cfg(test)]
@@ -196,14 +230,14 @@ ZZZ = (ZZZ, ZZZ)";
     pub fn example_part2() {
         let input = "LR
 
-11A = (11B, XXX)
-11B = (XXX, 11Z)
-11Z = (11B, XXX)
-22A = (22B, XXX)
-22B = (22C, 22C)
-22C = (22Z, 22Z)
-22Z = (22B, 22B)
-XXX = (XXX, XXX)";
+    11A = (11B, XXX)
+    11B = (XXX, 11Z)
+    11Z = (11B, XXX)
+    22A = (22B, XXX)
+    22B = (22C, 22C)
+    22C = (22Z, 22Z)
+    22Z = (22B, 22B)
+    XXX = (XXX, XXX)";
 
         assert_eq!(solve_part2(input), 6);
     }
