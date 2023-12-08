@@ -42,17 +42,13 @@ impl Iterator for Instructions {
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
     name: &'a str,
-    left: Weak<Self>,
-    right: Weak<Self>,
+    children: [Weak<Self>; 2],
 }
 
 impl<'a> Node<'a> {
     #[inline(always)]
     pub fn get(&self, direction: Direction) -> Weak<Self> {
-        match direction {
-            Direction::Left => self.left.clone(),
-            Direction::Right => self.right.clone(),
-        }
+        self.children[direction as usize].clone()
     }
 }
 
@@ -149,8 +145,10 @@ impl<'a> Map<'a> {
             node_index.insert(name, me.clone());
             Node {
                 name,
-                left: Self::create_recursive(left, node_source, node_index, created_nodes),
-                right: Self::create_recursive(right, node_source, node_index, created_nodes),
+                children: [
+                    Self::create_recursive(left, node_source, node_index, created_nodes),
+                    Self::create_recursive(right, node_source, node_index, created_nodes),
+                ],
             }
         });
 
@@ -228,7 +226,7 @@ pub fn solve_part2(input: &str) -> Number {
         if at_end {
             break;
         }
-        coz::progress!();
+        //coz::progress!();
     }
 
     res
