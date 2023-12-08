@@ -1,3 +1,4 @@
+use coz;
 use nom::{
     bytes::complete::{is_a, tag},
     character::complete::alphanumeric1,
@@ -46,6 +47,7 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
+    #[inline(always)]
     pub fn get(&self, direction: Direction) -> Weak<Self> {
         match direction {
             Direction::Left => self.left.clone(),
@@ -63,6 +65,7 @@ pub struct Map<'a> {
 
 impl<'a> Iterator for Map<'a> {
     type Item = &'a str;
+    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         let next_node = self
             .current_node
@@ -187,7 +190,6 @@ const SOLUTION_PART2: f64 = 15746133679061.0;
 #[aoc(day8, part2)]
 pub fn solve_part2(input: &str) -> Number {
     let map = Map::from(input, |s| s.ends_with('A'));
-    println!("{map:?}");
     let mut routes: Vec<Map> = map
         .nodes
         .iter()
@@ -201,7 +203,6 @@ pub fn solve_part2(input: &str) -> Number {
             }
         })
         .collect();
-    println!("{routes:?}");
 
     let start = Instant::now();
     let mut res = 0;
@@ -227,6 +228,7 @@ pub fn solve_part2(input: &str) -> Number {
         if at_end {
             break;
         }
+        coz::progress!();
     }
 
     res
