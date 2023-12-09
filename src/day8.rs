@@ -1,4 +1,3 @@
-use coz;
 use nom::{
     bytes::complete::{is_a, tag},
     character::complete::alphanumeric1,
@@ -6,7 +5,6 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
-use std::time::Instant;
 use std::{
     collections::HashMap,
     rc::{Rc, Weak},
@@ -183,12 +181,18 @@ pub fn solve_part1(input: &str) -> Number {
     res
 }
 
-const SOLUTION_PART2: f64 = 15746133679061.0;
+fn vec_lcm(mut input: Vec<Number>) -> Number {
+    if input.len() == 2 {
+        num::integer::lcm(input[0], input[1])
+    } else {
+        num::integer::lcm(input.pop().unwrap(), vec_lcm(input))
+    }
+}
 
 #[aoc(day8, part2)]
 pub fn solve_part2(input: &str) -> Number {
     let map = Map::from(input, |s| s.ends_with('A'));
-    let mut routes: Vec<Map> = map
+    let routes = map
         .nodes
         .iter()
         .filter_map(|node| {
@@ -200,36 +204,19 @@ pub fn solve_part2(input: &str) -> Number {
                 None
             }
         })
+        .map(|map| {
+            let mut res = 0;
+            for node in map {
+                res += 1;
+                if node.ends_with('Z') {
+                    break;
+                }
+            }
+            res
+        })
         .collect();
 
-    let start = Instant::now();
-    let mut res = 0;
-    loop {
-        res += 1;
-        if res % 10_000_000 == 0 && start.elapsed().as_secs() != 0 {
-            let progress = res as f64 / SOLUTION_PART2;
-            println!(
-                "Iteration\t{res}\t\t{:.5}%\t\t{}it/s\t\t{:.0}h left",
-                progress * 100.,
-                crate::common::human_readable_numbers(res / start.elapsed().as_secs()),
-                start.elapsed().as_secs() as f64 / 3600. / progress
-            );
-        }
-
-        let mut at_end = true;
-        routes.iter_mut().for_each(|route| {
-            if route.next().unwrap().as_bytes()[2] != b'Z' {
-                at_end = false;
-            }
-        });
-
-        if at_end {
-            break;
-        }
-        //coz::progress!();
-    }
-
-    res
+    vec_lcm(routes)
 }
 
 #[cfg(test)]
